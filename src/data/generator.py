@@ -139,7 +139,7 @@ class Tokenizer():
         if isinstance(text, bytes):
             text = text.decode()
 
-        text = unicodedata.normalize("NFKD", text).encode("ASCII", "ignore").decode("ASCII")
+        #text = unicodedata.normalize("NFKD", text).encode("ASCII", "ignore").decode("ASCII")
         text = " ".join(text.split())
 
         groups = ["".join(group) for _, group in groupby(text)]
