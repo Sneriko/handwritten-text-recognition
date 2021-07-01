@@ -31,6 +31,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=str, required=True)
     parser.add_argument("--arch", type=str, default="flor")
+    parser.add_argument("--charset_path", type=str, default=None)
 
     parser.add_argument("--transform", action="store_true", default=False)
     parser.add_argument("--cv2", action="store_true", default=False)
@@ -54,7 +55,12 @@ if __name__ == "__main__":
 
     input_size = (1024, 128, 1)
     max_text_length = 128
-    charset_base = string.printable[:95]
+
+    if args.charset_path is not None:
+        with open(args.charset_path, 'r') as f:
+            charset_base = f.readline().strip()
+    else:
+        charset_base = string.printable[:95]
 
     if args.transform:
         print(f"{args.source} dataset will be transformed...")
