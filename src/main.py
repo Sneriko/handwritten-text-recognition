@@ -26,12 +26,13 @@ from data.generator import DataGenerator, Tokenizer
 from data.reader import Dataset
 from network.model import HTRModel
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=str, required=True)
     parser.add_argument("--arch", type=str, default="flor")
     parser.add_argument("--charset_path", type=str, default=None)
+    parser.add_argument("--ds_names", nargs='*', type=str, default=[])
+    parser.add_argument('--comb_name', type=str, default=None)
 
     parser.add_argument("--transform", action="store_true", default=False)
     parser.add_argument("--cv2", action="store_true", default=False)
@@ -48,23 +49,35 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=16)
     args = parser.parse_args()
 
-    raw_path = os.path.join("..", "raw", args.source)
-    source_path = os.path.join("..", "data", f"{args.source}.hdf5")
-    output_path = os.path.join("..", "output", args.source, args.arch)
+    if args.comb_name is None:
+        ds_name = args.source
+    else:
+        ds_name = args.comb_name
+    
+    raw_path = os.path.join("raw", args.source)
+    source_path = os.path.join("data", f"{ds_name}.hdf5")
+    output_path = os.path.join("output", ds_name, args.arch)
     target_path = os.path.join(output_path, "checkpoint_weights.hdf5")
 
     input_size = (1024, 128, 1)
     max_text_length = 128
 
+    if len(args.ds_names) == 0:
+        ds_names =[args.source] 
+    else:
+        ds_names = args.ds_names
+
     if args.charset_path is not None:
         with open(args.charset_path, 'r') as f:
             charset_base = f.readline().strip()
+            print('hej')
     else:
         charset_base = string.printable[:95]
 
     if args.transform:
+        print(os.getcwd())
         print(f"{args.source} dataset will be transformed...")
-        ds = Dataset(source=raw_path, name=args.source)
+        ds = Dataset(source=raw_path, name=args.ds_names)
         ds.read_partitions()
         ds.save_partitions(source_path, input_size, max_text_length)
 

@@ -165,3 +165,5 @@ class Tokenizer():
         """Remove tokens (PAD) from text"""
 
         return text.replace(self.PAD_TK, "").replace(self.UNK_TK, "")
+
+

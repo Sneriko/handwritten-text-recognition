@@ -13,6 +13,8 @@ from glob import glob
 from tqdm import tqdm
 from data import preproc as pp
 from functools import partial
+from pathlib import Path
+import pandas as pd
 
 
 class Dataset():
@@ -27,14 +29,18 @@ class Dataset():
     def read_partitions(self):
         """Read images and sentences from dataset"""
 
-        dataset = getattr(self, f"_{self.name}")()
+        datasets = [] 
+        for i in range(len(self.name)):
+            datasets.append(getattr(self, f"_{self.name[i]}")())
 
         if not self.dataset:
             self.dataset = self._init_dataset()
 
-        for y in self.partitions:
-            self.dataset[y]['dt'] += dataset[y]['dt']
-            self.dataset[y]['gt'] += dataset[y]['gt']
+        for ds in datasets:
+        
+            for y in self.partitions:
+                self.dataset[y]['dt'] += ds[y]['dt']
+                self.dataset[y]['gt'] += ds[y]['gt']
 
     def save_partitions(self, target, image_input_size, max_text_length):
         """Save images and sentences from dataset"""
@@ -93,6 +99,55 @@ class Dataset():
         li = list(zip(*ls))
         random.shuffle(li)
         return zip(*li)
+
+    def _read_1930_census_partitions(self, basedir, ds_type, county, preproc):
+        
+        partition = {"train": [], "valid": [], "test": []}
+
+        ds_path = os.path.join(basedir, ds_type, county, preproc)
+        batches = glob(os.path.join(ds_path, '**'))
+        print(len(batches))
+
+        for batch in batches:
+            
+            headers = ['file_name', 'gt']
+            gt_path = os.path.join(basedir, ds_type, county, Path(batch).name + '_gt.txt')
+            gt_df = pd.read_csv(gt_path, '\t', names=headers, dtype=str, index_col=0)
+
+            pages = glob(os.path.join(batch, '**'))
+            
+            for page in pages:
+
+                imgs = glob(os.path.join(page, '**'))
+
+                for img in imgs:
+
+                    img_name = Path(img).name
+                    gt = gt_df.loc[img_name].item()
+            
+                    partition['train'].append([img, gt])
+
+        sub_partition = int(len(partition['train']) * 0.1)
+        partition['valid'] = partition['train'][:sub_partition]
+        partition['test'] = partition['train'][:sub_partition] #haha, bugg, det ska vara train dammit
+        partition['train'] = partition['train'][sub_partition:]
+
+        return partition
+
+
+    def _1930_census_year_gotland_binarized(self):
+
+        dataset = self._init_dataset()
+        print(self.source)
+        partition = self._read_1930_census_partitions(self.source, 'year', 'gotland', 'binarized')
+
+        for pt in self.partitions:
+            for item in partition[pt]:
+                dataset[pt]['dt'].append(item[0])
+                dataset[pt]['gt'].append(item[1])
+
+        return dataset
+
 
     def _hdsr14_car_a(self):
         """ICFHR 2014 Competition on Handwritten Digit String Recognition in Challenging Datasets dataset reader"""
