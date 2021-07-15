@@ -28,13 +28,14 @@ from network.model import HTRModel
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", type=str, required=True)
+    #parser.add_argument("--source", type=str, required=True)
     parser.add_argument("--arch", type=str, default="flor")
     parser.add_argument("--charset_path", type=str, default=None)
-    parser.add_argument("--ds_names", nargs='*', type=str, default=[])
-    parser.add_argument('--comb_name', type=str, default=None)
+    parser.add_argument("--ds_names", nargs='*', type=str, required=True)
+    #parser.add_argument('--comb_name', type=str, default=None)
 
     parser.add_argument("--transform", action="store_true", default=False)
+    parser.add_argument("--binarize", action="store_true", default=False)
     parser.add_argument("--cv2", action="store_true", default=False)
     parser.add_argument("--image", type=str, default="")
     parser.add_argument("--kaldi_assets", action="store_true", default=False)
@@ -49,23 +50,28 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=16)
     args = parser.parse_args()
 
-    if args.comb_name is None:
+    """if args.comb_name is None:
         ds_name = args.source
     else:
-        ds_name = args.comb_name
+        ds_name = args.comb_name"""
     
-    raw_path = os.path.join("raw", args.source)
-    source_path = os.path.join("data", f"{ds_name}.hdf5")
-    output_path = os.path.join("output", ds_name, args.arch)
-    target_path = os.path.join(output_path, "checkpoint_weights.hdf5")
+    #raw_path = os.path.join("raw")
+    #source_path = os.path.join("data", f"{ds_name}.hdf5")
+    #output_path = os.path.join("output", ds_name, args.arch)
+    #target_path = os.path.join(output_path, "checkpoint_weights.hdf5")
 
     input_size = (1024, 128, 1)
     max_text_length = 128
 
-    if len(args.ds_names) == 0:
-        ds_names =[args.source] 
-    else:
-        ds_names = args.ds_names
+    
+    ds_names = args.ds_names
+
+    ds_names_str = '_'.join(ds_names)
+
+    raw_path = os.path.join("raw")
+    source_path = os.path.join("data", f"{ds_names_str}.hdf5")
+    output_path = os.path.join("output", ds_names_str, args.arch)
+    target_path = os.path.join(output_path, "checkpoint_weights.hdf5")
 
     if args.charset_path is not None:
         with open(args.charset_path, 'r') as f:
@@ -76,10 +82,10 @@ if __name__ == "__main__":
 
     if args.transform:
         print(os.getcwd())
-        print(f"{args.source} dataset will be transformed...")
+        print(f"{ds_names_str} dataset will be transformed...")
         ds = Dataset(source=raw_path, name=args.ds_names)
         ds.read_partitions()
-        ds.save_partitions(source_path, input_size, max_text_length)
+        ds.save_partitions(source_path, input_size, max_text_length, binarize=args.binarize)
 
     elif args.cv2:
         with h5py.File(source_path, "r") as hf:
@@ -201,7 +207,7 @@ if __name__ == "__main__":
             start_time = datetime.datetime.now()
 
             predicts, _ = model.predict(x=dtgen.next_test_batch(),
-                                        steps=dtgen.steps['test'],
+                                        steps=dtgen.steps['valid'], #change from test just to check
                                         ctc_decode=True,
                                         verbose=1)
 

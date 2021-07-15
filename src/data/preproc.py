@@ -87,11 +87,20 @@ Preprocess metodology based in:
 """
 
 
-def preprocess(img, input_size):
+#include binarization as an option
+
+def preprocess(img, input_size, binarize):
     """Make the process with the `input_size` to the scale resize"""
 
     def imread(path):
         img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+
+        if binarize:
+            dst = cv2.fastNlMeansDenoising(img, h=31, templateWindowSize=7, searchWindowSize=21)
+            #img_grey = cv2.cvtColor(dst, cv2.COLOR_BGR2GRAY)
+            img_blur = cv2.medianBlur(dst,3).astype('uint8')
+            img = cv2.adaptiveThreshold(img_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+
         u, i = np.unique(np.array(img).flatten(), return_inverse=True)
         background = int(u[np.argmax(np.bincount(i))])
         return img, background

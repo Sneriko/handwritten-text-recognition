@@ -33,16 +33,22 @@ class Dataset():
         for i in range(len(self.name)):
             datasets.append(getattr(self, f"_{self.name[i]}")())
 
+        
+
         if not self.dataset:
             self.dataset = self._init_dataset()
 
         for ds in datasets:
         
             for y in self.partitions:
+
                 self.dataset[y]['dt'] += ds[y]['dt']
                 self.dataset[y]['gt'] += ds[y]['gt']
 
-    def save_partitions(self, target, image_input_size, max_text_length):
+        print(self.dataset['valid']['dt'][-10])
+        print(self.dataset['valid']['gt'][-10])
+
+    def save_partitions(self, target, image_input_size, max_text_length, binarize=False):
         """Save images and sentences from dataset"""
 
         os.makedirs(os.path.dirname(target), exist_ok=True)
@@ -67,8 +73,11 @@ class Dataset():
             for batch in range(0, len(self.dataset[pt]['gt']), batch_size):
                 images = []
 
+                input_size=image_input_size
+                bin=binarize
+
                 with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
-                    r = pool.map(partial(pp.preprocess, input_size=image_input_size),
+                    r = pool.map(partial(pp.preprocess, input_size=image_input_size, binarize=bin),
                                  self.dataset[pt]['dt'][batch:batch + batch_size])
                     images.append(r)
                     pool.close()
@@ -104,14 +113,14 @@ class Dataset():
         
         partition = {"train": [], "valid": [], "test": []}
 
-        ds_path = os.path.join(basedir, ds_type, county, preproc)
+        ds_path = os.path.join(basedir, '1930_census', ds_type, county, preproc)
         batches = glob(os.path.join(ds_path, '**'))
         print(len(batches))
 
         for batch in batches:
             
             headers = ['file_name', 'gt']
-            gt_path = os.path.join(basedir, ds_type, county, Path(batch).name + '_gt.txt')
+            gt_path = os.path.join(basedir, '1930_census', ds_type, county, preproc, Path(batch).name, Path(batch).name + '_gt.txt')
             gt_df = pd.read_csv(gt_path, '\t', names=headers, dtype=str, index_col=0)
 
             pages = glob(os.path.join(batch, '**'))
@@ -148,6 +157,51 @@ class Dataset():
 
         return dataset
 
+    def _ardis(self):
+
+        #glob parts
+        #for p in parts:
+        #read gt as df indexed by filename, column name trans
+        #glob imgs
+        #look transcript in df, if hit add to dataset
+        #return dataset
+
+        dataset = self._init_dataset()
+
+        parts = glob(os.path.join(self.source, 'ardis', 'original', '*/'))
+        parts.sort()
+
+        gt_parts = glob(os.path.join(self.source, 'ardis', 'binarized', '*.txt'))
+        gt_parts.sort(reverse=True)
+
+        partition = {"train": [], "valid": [], "test": []}
+
+        for gt_p, part in zip(gt_parts, parts):
+            
+            df_gt = pd.read_csv(gt_p, index_col = 0, dtype=str, names=['name', 'gt'], delim_whitespace=True)
+            imgs = glob(os.path.join(part, '**'))
+
+            for img in imgs:
+                img_name = Path(img).name
+                
+                gt = df_gt.loc[img_name]['gt']
+
+                partition['train'].append([img, gt])
+
+        sub_partition = int(len(partition['train']) * 0.1)
+        partition['valid'] = partition['train'][:sub_partition]
+        partition['test'] = partition['train'][:sub_partition] #haha, bugg, det ska vara train dammit
+        partition['train'] = partition['train'][sub_partition:]
+
+        for pt in self.partitions:
+            for item in partition[pt]:
+                dataset[pt]['dt'].append(item[0])
+                dataset[pt]['gt'].append(item[1])
+
+        return dataset
+
+
+
 
     def _hdsr14_car_a(self):
         """ICFHR 2014 Competition on Handwritten Digit String Recognition in Challenging Datasets dataset reader"""
@@ -157,7 +211,7 @@ class Dataset():
 
         for pt in self.partitions:
             for item in partition[pt]:
-                text = " ".join(list(item[1]))
+                text = "".join(list(item[1]))
                 dataset[pt]['dt'].append(item[0])
                 dataset[pt]['gt'].append(text)
 
@@ -171,7 +225,7 @@ class Dataset():
 
         for pt in self.partitions:
             for item in partition[pt]:
-                text = " ".join(list(item[1]))
+                text = "".join(list(item[1]))
                 dataset[pt]['dt'].append(item[0])
                 dataset[pt]['gt'].append(text)
 
@@ -189,7 +243,7 @@ class Dataset():
 
             with open(txt_file) as f:
                 lines = [line.replace("\n", "").split("\t") for line in f]
-                lines = [[os.path.join(img_path, x[0]), x[1]] for x in lines]
+                lines = [[os.path.join(img_path, x[0]), x[1].replace(' ', '')] for x in lines]
 
             partition[i] = lines
 
@@ -202,13 +256,15 @@ class Dataset():
     def _hdsr14_cvl(self):
         """ICFHR 2014 Competition on Handwritten Digit String Recognition in Challenging Datasets dataset reader"""
 
+        print('hej')
         dataset = self._init_dataset()
         partition = {"train": [], "valid": [], "test": []}
+        print(self.source)
 
-        glob_filter = os.path.join(self.source, "cvl-strings", "**", "*.png")
+        glob_filter = os.path.join(self.source, 'cvl', "cvl-strings-train", "**", "*.png")
         train_list = [x for x in glob(glob_filter, recursive=True)]
 
-        glob_filter = os.path.join(self.source, "cvl-strings-eval", "**", "*.png")
+        glob_filter = os.path.join(self.source, 'cvl', "cvl-strings-eval", "*.png")
         test_list = [x for x in glob(glob_filter, recursive=True)]
 
         sub_partition = int(len(train_list) * 0.1)
@@ -218,7 +274,7 @@ class Dataset():
 
         for pt in self.partitions:
             for item in partition[pt]:
-                text = " ".join(list(os.path.basename(item).split("-")[0]))
+                text = "".join(list(os.path.basename(item).split("-")[0]))
                 dataset[pt]['dt'].append(item)
                 dataset[pt]['gt'].append(text)
 
