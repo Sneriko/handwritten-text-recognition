@@ -144,6 +144,21 @@ class Dataset():
         return partition
 
 
+    def _1930_census_name_gotland_original(self):
+
+        dataset = self._init_dataset()
+        print(self.source)
+        partition = self._read_1930_census_partitions(self.source, 'name', 'gotland', 'original')
+
+        for pt in self.partitions:
+            for item in partition[pt]:
+                dataset[pt]['dt'].append(item[0])
+                dataset[pt]['gt'].append(item[1])
+
+        return dataset
+        
+        pass
+    
     def _1930_census_year_gotland_binarized(self):
 
         dataset = self._init_dataset()
