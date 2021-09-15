@@ -327,13 +327,13 @@ class Dataset():
     def _iam(self):
         """IAM dataset reader"""
 
-        pt_path = os.path.join(self.source, "largeWriterIndependentTextLineRecognitionTask")
+        pt_path = os.path.join(self.source, 'iam', "largeWriterIndependentTextLineRecognitionTask")
         paths = {"train": open(os.path.join(pt_path, "trainset.txt")).read().splitlines(),
                  "valid": open(os.path.join(pt_path, "validationset1.txt")).read().splitlines() +
                  open(os.path.join(pt_path, "validationset2.txt")).read().splitlines(),
                  "test": open(os.path.join(pt_path, "testset.txt")).read().splitlines()}
 
-        lines = open(os.path.join(self.source, "ascii", "lines.txt")).read().splitlines()
+        lines = open(os.path.join(self.source, 'iam', "ascii", "lines.txt")).read().splitlines()
         dataset = self._init_dataset()
         gt_dict = dict()
 
@@ -351,7 +351,7 @@ class Dataset():
                     folder = f"{split[0]}-{split[1]}"
 
                     img_file = f"{split[0]}-{split[1]}-{split[2]}.png"
-                    img_path = os.path.join(self.source, "lines", split[0], folder, img_file)
+                    img_path = os.path.join(self.source, 'iam', "lines", split[0], folder, img_file)
 
                     dataset[i]['gt'].append(gt_dict[line])
                     dataset[i]['dt'].append(img_path)
